@@ -11,31 +11,29 @@ syntax = "proto3";
 
 package pb;
 
-//主要数据
+
+// 主要数据.
 message PCenter {
-	message Input {//输入
-		UndirectGraph graph = 1;//无向图
-		int32 numOfP = 2;//服务节点数目
-	}
+  message Input { // 输入.
+    UndirectGraph graph = 1; // 无向图.
+    int32 centerNum = 2; // 服务节点数目.
+  }
 	
-	message Output {//输出
-		repeated int32 nodes = 1;//服务节点列表
-		int32 minMax = 2;//服务边的最大值的最小
-	}
-	
-	message UndirectGraph {//图信息
-		repeated int32 nodes = 1;//节点列表
-		repeated Edge edges = 2;//边列表
-	}
+  message Output { // 输出.
+    repeated int32 centers = 1; // 服务节点列表.
+  }
 
-	message Edge {//边信息
-		int32 id = 1;//边的编号，从0开始
-		int32 source = 2;//边的源节点
-		int32 target = 3;//边的目标节点
-		int32 length = 4;//边的长度
-	}
+  message UndirectGraph { // 无向图信息.
+    repeated Edge edges = 1; // 边列表.
+  }
 
-	message Submission { // 测评系统提交信息摘要.
+  message Edge { // 边信息.
+    int32 source = 1; // 边的源节点编号.
+    int32 target = 2; // 边的目标节点编号.
+    int32 length = 3; // 边的长度.
+  }
+
+  message Submission { // 测评系统提交信息摘要.
     // 应在 SDK 内由提交者手工填写的数据项.
     string author = 1; // 提交者姓名.
     string algorithm = 2; // 算法名称.
@@ -55,7 +53,5 @@ message PCenter {
     double obj = 31; // 计算结果目标函数值.
     string email = 32; // 提交者邮箱.
     string date = 33; // 提交时间.
-}
-
-
+  }
 }
