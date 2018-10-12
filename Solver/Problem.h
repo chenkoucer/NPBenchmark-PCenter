@@ -16,7 +16,7 @@
 
 #include "Common.h"
 #include "PbReader.h"
-#include "GateAssignment.pb.h"
+#include "PCenter.pb.h"
 
 
 namespace szx {
@@ -24,12 +24,12 @@ namespace szx {
 class Problem {
     #pragma region Type
 public:
-    struct Input : public pb::GateAssignment::Input {
+    struct Input : public pb::PCenter::Input {
         bool load(const String &path) { return pb::load(path, *this); }
     };
 
-    struct Output : public pb::GateAssignment::Output {
-        bool save(const String &path, pb::Submission &submission) const {
+    struct Output : public pb::PCenter::Output {
+        bool save(const String &path, pb::PCenter_Submission &submission) const {
             std::ofstream ofs(path);
             if (!ofs.is_open()) { return false; }
 
@@ -41,22 +41,20 @@ public:
             submission.set_language("C++");
             submission.set_compiler("VS2017");
             submission.set_os("Windows 10");
-            submission.set_problem("GateAssignment");
+            submission.set_problem("PCenter");
 
-            ofs << protobufToJson(submission, false) << std::endl << protobufToJson(*this);
+            ofs << pb::protobufToJson(submission, false) << std::endl << pb::protobufToJson(*this);
             return true;
         }
 
-        ID flightNumOnBridge = 0;
+        int maxLength = 0;
     };
     #pragma endregion Type
 
     #pragma region Constant
 public:
     enum {
-        MaxGateNum = 100,
-        MaxBridgeNum = 30,
-        MaxFlightNum = 400,
+        
 
         InvalidId = -1,
     };

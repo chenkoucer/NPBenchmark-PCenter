@@ -99,7 +99,7 @@ void Simulator::run(const String &envPath) {
 void Simulator::debug() {
     Task task;
     task.instSet = "";
-    task.instId = "rand.g4b2f8h480";
+    task.instId = "rand.p1e200c5l200";
     task.randSeed = "1500972793";
     //task.randSeed = to_string(RandSeed::generate());
     task.timeout = "180";
@@ -167,46 +167,52 @@ void Simulator::parallelBenchmark(int repeat) {
     }
 }
 
-void Simulator::generateInstance(const InstanceTrait &trait) {
-    Random rand;
-
-    int gateNum = rand.pick(trait.gateNum.begin, trait.gateNum.end);
-    int flightNum = rand.pick(trait.flightNum.begin, trait.flightNum.end);
-
+void Simulator::generateInstance(const string location, const int num) {
     Problem::Input input;
-    input.mutable_airport()->set_bridgenum(rand.pick(trait.bridgeNum.begin, trait.bridgeNum.end));
-    for (int g = 0; g < gateNum; ++g) {
-        auto &gate(*input.mutable_airport()->add_gates());
-        gate.set_id(g);
-        gate.set_mingap(30);
+    string str;
+    int line;
+    vector<int> vec;
+    //location = "D:\\vs-c\\IOstream\\instance\\pmed1.txt";
+    ifstream infile(location);
+    if (!infile.is_open()) { 
+        cerr << "can not open file!";
+        return;
     }
-    for (auto f = 0; f < flightNum; ++f) {
-        auto &flight(*input.add_flights());
-        flight.set_id(f);
-
-        int turnaroudLen = rand.pick(trait.turnaroundLen.begin, trait.turnaroundLen.end);
-        if (turnaroudLen > 3 * 60) { // reduce long turnaround.
-            turnaroudLen = rand.pick(trait.turnaroundLen.begin, trait.turnaroundLen.end);
-        }
-        int turnaroundBegin = rand.pick(0, trait.horizonLen - turnaroudLen);
-        flight.mutable_turnaround()->set_begin(turnaroundBegin);
-        flight.mutable_turnaround()->set_end(turnaroundBegin + turnaroudLen);
-
-        int incompatibleGateNum = rand.pick(trait.incompatibleGateNumPerFlight.begin, trait.incompatibleGateNumPerFlight.end);
-        Sampling sample(rand, incompatibleGateNum);
-        List<int> pickedGates(incompatibleGateNum + 1);
-        for (auto g = 0; g < gateNum; ++g) { pickedGates[sample.isPicked()] = g; }
-        for (auto ig = 1; ig <= incompatibleGateNum; ++ig) {
-            flight.add_incompatiblegates(pickedGates[ig]);
-        }
+    getline(infile, str);
+    vec = SplitString_s(str, " ");
+    input.set_centernum(vec[2]);
+    line = vec[1];
+    while (!infile.eof()) {
+        getline(infile, str);
+        vec = SplitString_s(str, " ");
+        auto &edge(*input.mutable_graph()->add_edges());
+        edge.set_source(vec[0]);
+        edge.set_target(vec[1]);
+        edge.set_length(vec[2]);
     }
-
     ostringstream path;
-    path << InstanceDir() << "rand.g" << input.airport().gates().size()
-        << "b" << input.airport().bridgenum()
-        << "f" << input.flights().size()
-        << "h" << trait.horizonLen << ".json";
+    path << InstanceDir() << "rand.p"<< num 
+        << "e" << input.graph().edges().size()
+        << "c" << input.centernum()
+        << "l" << line << ".json";
     save(path.str(), input);
+    //cout << "done" << endl;
 }
 
+vector<int> Simulator::SplitString_s(const string& str, const char* separator) {
+    vector<int> vec;
+    char *input = (char *)str.c_str();
+    char *next_token = nullptr;
+    char *p = strtok_s(input, separator, &next_token);
+    int a;
+    while (p != NULL) {
+        sscanf_s(p, "%d", &a);
+        vec.push_back(a);
+        p = strtok_s(NULL, separator, &next_token);
+    }
+    return vec;
 }
+
+
+}
+

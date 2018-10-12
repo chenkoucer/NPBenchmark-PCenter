@@ -12,9 +12,12 @@
 #include <string>
 #include <vector>
 
+
 #include "../Solver/Solver.h"
 #include "../Solver/Problem.h"
 #include "../Solver/Utility.h"
+
+
 
 
 namespace szx {
@@ -38,13 +41,9 @@ public:
         String runId;
     };
 
-    struct InstanceTrait {
-        int horizonLen = 24 * 60;
-        Interval<int> gateNum = Interval<int>(60, Problem::MaxGateNum);
-        Interval<int> bridgeNum = Interval<int>(20, Problem::MaxBridgeNum);
-        Interval<int> flightNum = Interval<int>(100, Problem::MaxFlightNum);
-        Interval<int> incompatibleGateNumPerFlight = Interval<int>(0, 8);
-        Interval<int> turnaroundLen = Interval<int>(40, 8 * 60);
+    struct InstanceTrait { // restrictions of data
+        Interval<int> pointNum = Interval<int>(100, 3038);
+        Interval<int> centerNum = Interval<int>(5, 500);
     };
     #pragma endregion Type
 
@@ -79,11 +78,20 @@ public:
     void parallelBenchmark(int repeat);
 
 
-    void generateInstance(const InstanceTrait &trait);
+    void generateInstance(const std::string location,const int num);
     void generateInstance() {
-        InstanceTrait trait;
-        generateInstance(trait);
+        std::string str1 = "D:\\vs-c\\IOstream\\instance\\pmed";
+        std::string str2 = ".txt";
+        for (int i = 1; i <= 40; ++i) {
+            std::stringstream location;
+            location << str1 << i << str2;
+            //std::cout << location.str() << " ";
+            generateInstance(location.str(), i);
+        }
+        
     }
+
+    std::vector<int> Simulator::SplitString_s(const std::string& str, const char* separator);
     #pragma endregion Method
 
     #pragma region Field

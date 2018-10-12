@@ -11,10 +11,44 @@
 #include <cmath>
 
 
+
+
 using namespace std;
+
+const int INF = 1000000000;
 
 
 namespace szx {
+
+vector<int> Dijkstra(int n, int s, vector<vector<int>> G) { // 求服务节点到其余节点的距离
+    vector<int> d(n, INF); // 初始化最短距离矩阵，全部为INF
+    vector<bool> vis(n); // 标记节点是否被访问
+    vector<int> pre(n); // 最短路径的上一个节点
+    for (int i = 0; i < n; ++i)
+        pre[i] = i;
+
+    d[s] = 0;
+    for (int i = 0; i < n; ++i) {
+        int u = -1;
+        int MIN = INF;
+        for (int j = 0; j < n; ++j) {
+            if (vis[j] == false && d[j] < MIN) {
+                u = j;
+                MIN = d[j];
+            }
+        }
+        if (u == -1)
+            return d;
+        vis[u] = true; // 标记u已被访问
+        for (int v = 0; v < n; ++v) {
+            if (vis[v] == false && d[u] + G[u][v] < d[v]) {
+                d[v] = d[u] + G[u][v];
+                pre[v] = u;
+            }
+        }
+    }
+    return d;
+}
 
 #pragma region Solver::Cli
 int Solver::Cli::run(int argc, char * argv[]) {
@@ -65,7 +99,7 @@ int Solver::Cli::run(int argc, char * argv[]) {
     Solver solver(input, env, cfg);
     solver.solve();
 
-    pb::Submission submission;
+    pb::PCenter_Submission submission;
     submission.set_thread(to_string(env.jobNum));
     submission.set_instance(env.friendlyInstName());
     submission.set_duration(to_string(solver.timer.elapsedSeconds()) + "s");
@@ -175,10 +209,10 @@ bool Solver::solve() {
     Length bestValue = 0;
     for (int i = 0; i < workerNum; ++i) {
         if (!success[i]) { continue; }
-        Log(LogSwitch::Szx::Framework) << "worker " << i << " got " << solutions[i].flightNumOnBridge << endl;
-        if (solutions[i].flightNumOnBridge <= bestValue) { continue; }
+        Log(LogSwitch::Szx::Framework) << "worker " << i << " got " << solutions[i].maxLength << endl;
+        if (solutions[i].maxLength >= bestValue) { continue; }
         bestIndex = i;
-        bestValue = solutions[i].flightNumOnBridge;
+        bestValue = solutions[i].maxLength;
     }
 
     env.rid = to_string(bestIndex);
@@ -195,7 +229,7 @@ void Solver::record() const {
 
     System::MemoryUsage mu = System::peakMemoryUsage();
 
-    Length obj = output.flightNumOnBridge;
+    Length obj = output.maxLength;
     Length checkerObj = -1;
     bool feasible = check(checkerObj);
 
@@ -204,13 +238,13 @@ void Solver::record() const {
         << env.rid << ","
         << env.instPath << ","
         << feasible << "," << (obj - checkerObj) << ","
-        << output.flightNumOnBridge << ","
+        << output.maxLength << ","
         << timer.elapsedSeconds() << ","
         << mu.physicalMemory << "," << mu.virtualMemory << ","
         << env.randSeed << ","
         << cfg.toBriefStr() << ","
-        << generation << "," << iteration << ","
-        << (100.0 * output.flightNumOnBridge / input.flights().size()) << "%,";
+        << generation << "," << iteration << ",";
+        
 
     // record solution vector.
     // EXTEND[szx][2]: save solution in log.
@@ -223,7 +257,7 @@ void Solver::record() const {
     ofstream logFile(env.logPath, ios::app);
     logFile.seekp(0, ios::end);
     if (logFile.tellp() <= 0) {
-        logFile << "Time,ID,Instance,Feasible,ObjMatch,Width,Duration,PhysMem,VirtMem,RandSeed,Config,Generation,Iteration,Ratio,Solution" << endl;
+        logFile << "Time,ID,Instance,Feasible,ObjMatch,Width,Duration,PhysMem,VirtMem,RandSeed,Config,Generation,Iteration" << endl;
     }
     logFile << log.str();
     logFile.close();
@@ -235,9 +269,7 @@ bool Solver::check(Length &checkerObj) const {
     enum CheckerFlag {
         IoError = 0x0,
         FormatError = 0x1,
-        FlightNotAssignedError = 0x2,
-        IncompatibleAssignmentError = 0x4,
-        FlightOverlapError = 0x8
+        CenterRepeatedError = 0x2,
     };
 
     checkerObj = System::exec("Checker.exe " + env.instPath + " " + env.solutionPathWithTime());
@@ -245,9 +277,7 @@ bool Solver::check(Length &checkerObj) const {
     checkerObj = ~checkerObj;
     if (checkerObj == CheckerFlag::IoError) { Log(LogSwitch::Checker) << "IoError." << endl; }
     if (checkerObj & CheckerFlag::FormatError) { Log(LogSwitch::Checker) << "FormatError." << endl; }
-    if (checkerObj & CheckerFlag::FlightNotAssignedError) { Log(LogSwitch::Checker) << "FlightNotAssignedError." << endl; }
-    if (checkerObj & CheckerFlag::IncompatibleAssignmentError) { Log(LogSwitch::Checker) << "IncompatibleAssignmentError." << endl; }
-    if (checkerObj & CheckerFlag::FlightOverlapError) { Log(LogSwitch::Checker) << "FlightOverlapError." << endl; }
+    if (checkerObj & CheckerFlag::CenterRepeatedError) { Log(LogSwitch::Checker) << "CenterRepeatedError." << endl; }
     return false;
     #else
     checkerObj = 0;
@@ -256,34 +286,59 @@ bool Solver::check(Length &checkerObj) const {
 }
 
 void Solver::init() {
-    aux.isCompatible.resize(input.flights().size(), List<bool>(input.airport().gates().size(), true));
-    ID f = 0;
-    for (auto flight = input.flights().begin(); flight != input.flights().end(); ++flight, ++f) {
-        for (auto ig = flight->incompatiblegates().begin(); ig != flight->incompatiblegates().end(); ++ig) {
-            aux.isCompatible[f][*ig] = false;
-        }
-    }
+    
 }
 
 bool Solver::optimize(Solution &sln, ID workerId) {
     Log(LogSwitch::Szx::Framework) << "worker " << workerId << " starts." << endl;
+    vector<int> vec;
+    for (auto edge = input.graph().edges().begin(); edge != input.graph().edges().end(); ++edge) {
+        vec.push_back(edge->source());
+    }
+    auto maxPosition = max_element(vec.begin(), vec.end());
+    ID nodeNum = *maxPosition;
+    ID edgeNum = input.graph().edges().size();
+    ID centerNum = input.centernum();
 
-    ID gateNum = input.airport().gates().size();
-    ID bridgeNum = input.airport().bridgenum();
-    ID flightNum = input.flights().size();
-
-    // reset solution state.
     bool status = true;
-    auto &assignments(*sln.mutable_assignments());
-    assignments.Resize(flightNum, Problem::InvalidId);
-    sln.flightNumOnBridge = 0;
-
+    sln.maxLength = 0;
 
     // TODO[0]: replace the following random assignment with your own algorithm.
-    for (ID f = 0; !timer.isTimeOut() && (f < flightNum); ++f) {
-        assignments[f] = rand.pick(gateNum);
-        if (assignments[f] < bridgeNum) { ++sln.flightNumOnBridge; } // record obj.
+    vector<vector<int>> G(nodeNum, vector<int>(nodeNum, INF));
+    for (auto edge = input.graph().edges().begin(); edge != input.graph().edges().end(); ++edge) {
+        int source = edge->source();
+        int target = edge->target();
+        int length = edge->length();
+        G[source - 1][target - 1] = length;
+        G[target - 1][source - 1] = length;
     }
+    for (int i = 0; i < nodeNum; ++i) {
+        G[i][i] = 0;
+    }
+    vector<int> centers;
+    for (int e = 0; !timer.isTimeOut() && (e < nodeNum - 1); ++e) {
+        int index = rand.pick(0, edgeNum);
+        sln.add_centers(index);
+        centers.push_back(index);
+    }
+    vector<vector<int>> distance(centerNum, vector<int>(nodeNum)); // 所有服务节点到其余节点的距离
+    for (int i = 0; i < nodeNum; ++i) {
+        centers.push_back(output.centers(i));
+        distance.push_back(Dijkstra(nodeNum, output.centers(i) - 1, G));
+    }
+    vector<int> serveLength;
+    for (int i = 0; i < nodeNum; ++i) {
+        if (find(centers.begin(), centers.end(), i + 1) == centers.end()) { // 只处理用户节点
+            for (int j = 0; j < centerNum; ++j) {
+                vector<int> length;
+                length.push_back(distance[j][i]);
+                auto minPosition = min_element(length.begin(), length.end());
+                serveLength.push_back(*minPosition); // 服务边的长度
+            }
+        }
+    }
+    auto maxPosition_s = max_element(serveLength.begin(), serveLength.end()); // 服务边中的最大值
+    sln.maxLength = *maxPosition_s;
 
 
     Log(LogSwitch::Szx::Framework) << "worker " << workerId << " ends." << endl;
