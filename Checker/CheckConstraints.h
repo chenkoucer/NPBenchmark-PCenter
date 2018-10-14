@@ -11,12 +11,14 @@ const int INF = 1000000000;
 
 class CheckConstraints {
 public:
-    int numOfNodes;
-    int numOfCenters;
+    int numOfNodes = 0;
+    int numOfCenters = 0;
     int maxLength = 0;
+    pb::PCenter::Input input;
+    pb::PCenter::Output output;
 
 public:
-    CheckConstraints(const pb::PCenter::Input &input, const pb::PCenter::Output &output);
+    CheckConstraints(const pb::PCenter::Input &input_s, const pb::PCenter::Output &output_s);
 
 public:
     static vector<int> Dijkstra(int n, int s, vector<vector<int>> G) {
@@ -49,8 +51,9 @@ public:
         return d;
     }
 
-    int generateNum(const pb::PCenter::Input input);
-    vector<vector<int>> generateGraph(const pb::PCenter::Input &input);
+    int generateNum();
+    vector<vector<int>> generateGraph();
+    int generateMaxLength();
 
 
 };

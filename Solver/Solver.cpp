@@ -175,15 +175,15 @@ bool Solver::solve() {
 
     Log(LogSwitch::Szx::Framework) << "collect best result among all workers." << endl;
     int bestIndex = -1;
-    Length bestValue = 0;
+    Length bestValue = INF;
     for (int i = 0; i < workerNum; ++i) {
         if (!success[i]) { continue; }
         Log(LogSwitch::Szx::Framework) << "worker " << i << " got " << solutions[i].maxLength << endl;
+        //cout << solutions[i].centers().size();
         if (solutions[i].maxLength >= bestValue) { continue; }
         bestIndex = i;
         bestValue = solutions[i].maxLength;
     }
-
     env.rid = to_string(bestIndex);
     if (bestIndex < 0) { return false; }
     output = solutions[bestIndex];
@@ -199,6 +199,7 @@ void Solver::record() const {
     System::MemoryUsage mu = System::peakMemoryUsage();
 
     Length obj = output.maxLength;
+    //cout << obj << endl;
     Length checkerObj = -1;
     bool feasible = check(checkerObj);
 
@@ -285,29 +286,31 @@ bool Solver::optimize(Solution &sln, ID workerId) {
         G[i][i] = 0;
     }
     vector<int> centers;
-    for (int e = 0; !timer.isTimeOut() && (e < nodeNum - 1); ++e) {
-        int index = rand.pick(0, edgeNum);
+    for (int e = 0; !timer.isTimeOut() && (e < centerNum); ++e) {
+        int index = rand.pick(0, nodeNum);
         sln.add_centers(index);
         centers.push_back(index);
     }
+    //cout << sln.centers().size() << endl;
     vector<vector<int>> distance(centerNum, vector<int>(nodeNum)); // 所有服务节点到其余节点的距离
-    for (int i = 0; i < nodeNum; ++i) {
-        centers.push_back(output.centers(i));
-        distance.push_back(CheckConstraints::Dijkstra(nodeNum, output.centers(i) - 1, G));
+    for (int i = 0; i < centerNum; ++i) {
+        distance[i] = CheckConstraints::Dijkstra(nodeNum, sln.centers(i) - 1, G);
     }
     vector<int> serveLength;
     for (int i = 0; i < nodeNum; ++i) {
         if (find(centers.begin(), centers.end(), i + 1) == centers.end()) { // 只处理用户节点
+            vector<int> length(centerNum);
             for (int j = 0; j < centerNum; ++j) {
-                vector<int> length;
-                length.push_back(distance[j][i]);
-                auto minPosition = min_element(length.begin(), length.end());
-                serveLength.push_back(*minPosition); // 服务边的长度
+                length[j] = distance[j][i];
             }
+            auto minPosition = min_element(length.begin(), length.end());
+            serveLength.push_back(*minPosition); // 服务边的长度
         }
     }
     auto maxPosition_s = max_element(serveLength.begin(), serveLength.end()); // 服务边中的最大值
     sln.maxLength = *maxPosition_s;
+
+
 
 
     Log(LogSwitch::Szx::Framework) << "worker " << workerId << " ends." << endl;

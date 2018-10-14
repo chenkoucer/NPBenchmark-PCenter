@@ -99,9 +99,9 @@ void Simulator::run(const String &envPath) {
 void Simulator::debug() {
     Task task;
     task.instSet = "";
-    task.instId = "rand.p1e200c5l200";
-    task.randSeed = "1500972793";
-    //task.randSeed = to_string(RandSeed::generate());
+    task.instId = "pmed2";
+    //task.randSeed = "1500972793";
+    task.randSeed = to_string(Random::generateSeed());
     task.timeout = "180";
     //task.maxIter = "1000000000";
     task.jobNum = "1";
@@ -126,7 +126,10 @@ void Simulator::benchmark(int repeat) {
     random_device rd;
     mt19937 rgen(rd());
     // EXTEND[szx][5]: read it from InstanceList.txt.
-    vector<String> instList({ "rand.g4b2f8h480", "rand.g80b25f200h1440" });
+    vector<String> instList({ "pmed1", "pmed2", "pmed3", "pmed4", "pmed5", "pmed6", "pmed7", "pmed8", "pmed9", "pmed10",
+        "pmed11", "pmed12", "pmed13", "pmed14", "pmed15", "pmed16", "pmed17", "pmed18", "pmed19", "pmed20",
+        "pmed21", "pmed22", "pmed23", "pmed24", "pmed25", "pmed26", "pmed27", "pmed28", "pmed29", "pmed30",
+        "pmed31", "pmed32", "pmed33", "pmed34", "pmed35", "pmed36", "pmed37", "pmed38", "pmed39", "pmed40", });
     for (int i = 0; i < repeat; ++i) {
         //shuffle(instList.begin(), instList.end(), rgen);
         for (auto inst = instList.begin(); inst != instList.end(); ++inst) {
@@ -138,7 +141,8 @@ void Simulator::benchmark(int repeat) {
     }
 }
 
-void Simulator::parallelBenchmark(int repeat) {
+void Simulator::parallelBenchmark(int repeat) { //现在的问题：1、多个算例无法全部运行完毕  2、后期输出产生混乱
+
     Task task;
     task.instSet = "";
     //task.timeout = "180";
@@ -154,7 +158,10 @@ void Simulator::parallelBenchmark(int repeat) {
     random_device rd;
     mt19937 rgen(rd());
     // EXTEND[szx][5]: read it from InstanceList.txt.
-    vector<String> instList({ "rand.g4b2f8h480", "rand.g80b25f200h1440" });
+    vector<String> instList({ "pmed1", "pmed2", "pmed3", "pmed4", "pmed5", "pmed6", "pmed7", "pmed8", "pmed9", "pmed10",
+        "pmed11", "pmed12", "pmed13", "pmed14", "pmed15", "pmed16", "pmed17", "pmed18", "pmed19", "pmed20",
+        "pmed21", "pmed22", "pmed23", "pmed24", "pmed25", "pmed26", "pmed27", "pmed28", "pmed29", "pmed30",
+        "pmed31", "pmed32", "pmed33", "pmed34", "pmed35", "pmed36", "pmed37", "pmed38", "pmed39", "pmed40", });
     for (int i = 0; i < repeat; ++i) {
         //shuffle(instList.begin(), instList.end(), rgen);
         for (auto inst = instList.begin(); inst != instList.end(); ++inst) {
@@ -191,10 +198,7 @@ void Simulator::generateInstance(const string location, const int num) {
         edge.set_length(vec[2]);
     }
     ostringstream path;
-    path << InstanceDir() << "rand.p"<< num 
-        << "e" << input.graph().edges().size()
-        << "c" << input.centernum()
-        << "l" << line << ".json";
+    path << InstanceDir() << "pmed"<< num << ".json";
     save(path.str(), input);
     //cout << "done" << endl;
 }

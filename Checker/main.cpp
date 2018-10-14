@@ -23,6 +23,9 @@ int main(int argc, char *argv[]) {
         CenterRepeatedError = 0x2,
     };
 
+    //string inputPath = "C:\\Users\\jinqi\\Desktop\\NPBenchmark-PCenter-master\\Deploy\\Instance\\pmed1.json";
+    //string outputPath = "C:\\Users\\jinqi\\Desktop\\NPBenchmark-PCenter-master\\Deploy\\Solution\\pmed1.json";
+
     string inputPath;
     string outputPath;
 
@@ -46,6 +49,7 @@ int main(int argc, char *argv[]) {
     pb::PCenter::Output output;
     ifstream ifs(outputPath);
     if (!ifs.is_open()) { return ~CheckerFlag::IoError; }
+
     string submission;
     getline(ifs, submission); // skip the first line.
     ostringstream oss;
@@ -63,7 +67,8 @@ int main(int argc, char *argv[]) {
         }
     }
     CheckConstraints check(input, output);
-    maxLength = check.maxLength;
+    check.generateNum();
+    maxLength = check.generateMaxLength();
 
     int returnCode = (error == 0) ? maxLength: ~error;
     cout << returnCode << endl;
