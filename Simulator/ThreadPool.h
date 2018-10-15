@@ -4,8 +4,8 @@
 /// note  : 1.	
 ////////////////////////////////
 
-#ifndef SZX_CPPUTILIBS_THREAD_POOL_H
-#define SZX_CPPUTILIBS_THREAD_POOL_H
+#ifndef JQ_CPPUTILIBS_THREAD_POOL_H
+#define JQ_CPPUTILIBS_THREAD_POOL_H
 
 
 #include <atomic>
@@ -251,4 +251,4 @@ public:
 }
 
 
-#endif // SZX_CPPUTILIBS_THREAD_POOL_H
+#endif // JQ_CPPUTILIBS_THREAD_POOL_H

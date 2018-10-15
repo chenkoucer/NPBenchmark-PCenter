@@ -4,8 +4,8 @@
 /// note  : 1.	
 ////////////////////////////////
 
-#ifndef SMART_SZX_GATE_ASSIGNMENT_SOLVER_H
-#define SMART_SZX_GATE_ASSIGNMENT_SOLVER_H
+#ifndef SMART_JQ_PCENTER_SOLVER_H
+#define SMART_JQ_PCENTER_SOLVER_H
 
 
 #include "Config.h"
@@ -221,4 +221,4 @@ public:
 }
 
 
-#endif // SMART_SZX_GATE_ASSIGNMENT_SOLVER_H
+#endif // SMART_JQ_PCENTER_SOLVER_H

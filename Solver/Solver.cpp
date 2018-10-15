@@ -74,10 +74,10 @@ int Solver::Cli::run(int argc, char * argv[]) {
     submission.set_duration(to_string(solver.timer.elapsedSeconds()) + "s");
 
     solver.output.save(env.slnPath, submission);
-    #if SZX_DEBUG
+    #if JQ_DEBUG
     solver.output.save(env.solutionPathWithTime(), submission);
     solver.record();
-    #endif // SZX_DEBUG
+    #endif // JQ_DEBUG
 
     return 0;
 }
@@ -191,7 +191,7 @@ bool Solver::solve() {
 }
 
 void Solver::record() const {
-    #if SZX_DEBUG
+    #if JQ_DEBUG
     int generation = 0;
 
     ostringstream log;
@@ -231,11 +231,11 @@ void Solver::record() const {
     }
     logFile << log.str();
     logFile.close();
-    #endif // SZX_DEBUG
+    #endif // JQ_DEBUG
 }
 
 bool Solver::check(Length &checkerObj) const {
-    #if SZX_DEBUG
+    #if JQ_DEBUG
     enum CheckerFlag {
         IoError = 0x0,
         FormatError = 0x1,
@@ -252,7 +252,7 @@ bool Solver::check(Length &checkerObj) const {
     #else
     checkerObj = 0;
     return true;
-    #endif // SZX_DEBUG
+    #endif // JQ_DEBUG
 }
 
 void Solver::init() {
@@ -264,6 +264,7 @@ bool Solver::optimize(Solution &sln, ID workerId) {
     vector<int> vec;
     for (auto edge = input.graph().edges().begin(); edge != input.graph().edges().end(); ++edge) {
         vec.push_back(edge->source());
+        vec.push_back(edge->target());
     }
     auto maxPosition = max_element(vec.begin(), vec.end());
     ID nodeNum = *maxPosition;

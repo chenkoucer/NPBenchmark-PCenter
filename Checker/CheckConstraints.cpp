@@ -16,6 +16,7 @@ int CheckConstraints::generateNum() { // 获取节点数
     vector<int> vec;
     for (auto edge = input.graph().edges().begin(); edge != input.graph().edges().end(); ++edge) {
         vec.push_back(edge->source());
+        vec.push_back(edge->target());
     }
     auto maxPosition = max_element(vec.begin(), vec.end());
     numOfNodes = *maxPosition;
