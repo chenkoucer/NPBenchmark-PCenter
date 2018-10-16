@@ -15,9 +15,7 @@
 
 using namespace std;
 
-
 namespace szx {
-
 
 #pragma region Solver::Cli
 int Solver::Cli::run(int argc, char * argv[]) {
@@ -295,7 +293,7 @@ bool Solver::optimize(Solution &sln, ID workerId) {
     //cout << sln.centers().size() << endl;
     vector<vector<int>> distance(centerNum, vector<int>(nodeNum)); // 所有服务节点到其余节点的距离
     for (int i = 0; i < centerNum; ++i) {
-        distance[i] = CheckConstraints::Dijkstra(nodeNum, sln.centers(i) - 1, G);
+        distance[i] = CheckConstraints::Dijkstra(nodeNum, sln.centers(i), G);
     }
     vector<int> serveLength;
     for (int i = 0; i < nodeNum; ++i) {
@@ -310,6 +308,7 @@ bool Solver::optimize(Solution &sln, ID workerId) {
     }
     auto maxPosition_s = max_element(serveLength.begin(), serveLength.end()); // 服务边中的最大值
     sln.maxLength = *maxPosition_s;
+
 
 
 

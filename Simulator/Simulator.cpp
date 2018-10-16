@@ -16,6 +16,8 @@
 using namespace std;
 
 
+
+
 namespace szx {
 
 void Simulator::initDefaultEnvironment() {
@@ -141,7 +143,7 @@ void Simulator::benchmark(int repeat) {
     }
 }
 
-void Simulator::parallelBenchmark(int repeat) { //现在的问题：1、多个算例无法全部运行完毕  2、后期输出产生混乱
+void Simulator::parallelBenchmark(int repeat) { //现在的问题：1、并行输出产生混乱
 
     Task task;
     task.instSet = "";

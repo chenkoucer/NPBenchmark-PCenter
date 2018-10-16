@@ -45,7 +45,7 @@ int CheckConstraints::generateMaxLength() {
     vector<vector<int>> distance(numOfCenters, vector<int>(numOfNodes)); // 所有服务节点到其余节点的距离
     for (int i = 0; i < numOfCenters; ++i) {
         centers.push_back(output.centers(i));
-        distance[i] = Dijkstra(numOfNodes, output.centers(i) - 1, G);
+        distance[i] = Dijkstra(numOfNodes, output.centers(i), G);
     }
     vector<int> serveLength;
     for (int i = 0; i < numOfNodes; ++i) {
