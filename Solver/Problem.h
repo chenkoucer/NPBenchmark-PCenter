@@ -13,7 +13,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-
+#include <vector>
 #include "Common.h"
 #include "PbReader.h"
 #include "PCenter.pb.h"

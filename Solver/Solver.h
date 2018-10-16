@@ -15,7 +15,7 @@
 #include <functional>
 #include <sstream>
 #include <thread>
-
+#include <vector>
 #include "Common.h"
 #include "Utility.h"
 #include "LogSwitch.h"
@@ -199,7 +199,6 @@ protected:
     void init();
     bool optimize(Solution &sln, ID workerId = 0); // optimize by a single worker.
     #pragma endregion Method
-
     #pragma region Field
 public:
     Problem::Input input;

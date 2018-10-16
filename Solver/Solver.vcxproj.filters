@@ -48,6 +48,9 @@
     <ClInclude Include="PCenter.pb.h">
       <Filter>Protocol</Filter>
     </ClInclude>
+    <ClInclude Include="tool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
