@@ -1,5 +1,4 @@
 #include "Solver.h"
-#include "tool.h"
 #include <algorithm>
 #include <iostream>
 #include <fstream>
@@ -14,7 +13,6 @@
 
 
 using namespace std;
-
 
 namespace szx {
 
@@ -261,7 +259,8 @@ void Solver::init() {
 
 bool Solver::optimize(Solution &sln, ID workerId) {
     Log(LogSwitch::Szx::Framework) << "worker " << workerId << " starts." << endl;
-    vector<int> vec;
+    //vector<int> vec;
+	vector<int> vec;
     for (auto edge = input.graph().edges().begin(); edge != input.graph().edges().end(); ++edge) {
         vec.push_back(edge->source());
         vec.push_back(edge->target());
@@ -270,11 +269,9 @@ bool Solver::optimize(Solution &sln, ID workerId) {
     ID nodeNum = *maxPosition;
     ID edgeNum = input.graph().edges().size();
     ID centerNum = input.centernum();
-	ID kClosed = 8; // 最长边用户节点的前k个相邻节点，构造初始解时用到
-
+	//ID kClosed = 8; // 最长边用户节点的前k个相邻节点，构造初始解时用到
     bool status = true;
     sln.maxLength = 0;
-
     // TODO[0]: replace the following random assignment with your own algorithm.
     vector<vector<int>> G(nodeNum, vector<int>(nodeNum, INF));
     for (auto edge = input.graph().edges().begin(); edge != input.graph().edges().end(); ++edge) {
@@ -285,95 +282,40 @@ bool Solver::optimize(Solution &sln, ID workerId) {
         G[target - 1][source - 1] = length;
     }
     for (int i = 0; i < nodeNum; ++i) {
-        G[i][i] = 0;
+        G[i] = CheckConstraints::Dijkstra(nodeNum, i, G);
     }
+
 	//初始化服务节点
 #pragma initialize solution{
-
 	vector<int> centers;
 	int index = rand.pick(nodeNum);
-	vector<vector<int>> fTable(2, vector<int>(nodeNum, -1));// 表示节点v的最近服务节点fTable[0][v]和次近服务节点fTable[1][v]
-	vector<vector<int>> dTable(2, vector<int>(nodeNum, INF)); //表示节点v的最近服务节距离dTable[0][v]和次近服务节点距离dTable[1][v]
-	
+	//vector<vector<int>> fTable(2, vector<int>(nodeNum, -1));// 表示节点v的最近服务节点fTable[0][v]和次近服务节点fTable[1][v]
+	//vector<vector<int>> dTable(2, vector<int>(nodeNum, INF)); //表示节点v的最近服务节距离dTable[0][v]和次近服务节点距离dTable[1][v]
+	fTable.assign(2, vector<int>(nodeNum, -1));
+	dTable.assign(2, vector<int>(nodeNum, INF));
 	sln.add_centers(index);
 	centers.push_back(index);
 	fTable[0].assign(nodeNum, index);
 	dTable[0] = CheckConstraints::Dijkstra(nodeNum, index, G);
 	for (int f = 1; f < centerNum; ++f) {//从初始节点开始，依次构造服务节点
-		//寻找最长服务边用户节点
-		int maxServerLength = -1, serveredNode = -1;
-		for (int v = 0; v < nodeNum; ++v) {
-			if (dTable[0][v] > maxServerLength) {
-				maxServerLength = dTable[0][v];
-				serveredNode = v;
-			}
-		}
-		vector<int> vDistance(nodeNum);//备选用户节点与其他节点的最近距离
-		vDistance = CheckConstraints::Dijkstra(nodeNum, serveredNode, G);
-		vector<int> kClosedNode; //备选用户节点v的前k个最近节点
-		kClosedNode = ck::sortIndexes(vDistance, kClosed);
-		serveredNode = kClosedNode[rand.pick(kClosedNode.size())];//从这k个近节点中随机选择一个作为服务节点
-
-		centers.push_back(serveredNode);
-		sln.add_centers(serveredNode);
-			vDistance = CheckConstraints::Dijkstra(nodeNum, serveredNode, G);
-		for (int i = 0; i < nodeNum; ++i) {//更新f表和t表
-			if (vDistance[i] < dTable[0][i]) {
-				dTable[1][i] = dTable[0][i];
-				dTable[0][i] = vDistance[i];
-				fTable[1][i] = fTable[0][i];
-				fTable[0][i] = serveredNode;
-			}
-			else if (vDistance[i] < dTable[1][i]) {
-				dTable[1][i] = vDistance[i];
-				fTable[1][i] = serveredNode;
-			}
-			else;
-		}
-
+		int serverNode = selectSeveredNode(nodeNum, G);
+		addNodeToTable(centers, serverNode, nodeNum, G);
 	}
 #pragma initialize solution}
 
 	//交换服务节点
 #pragma exchange serveredNode{
-	int maxServerLength = -1, serveredNode = -1;
-	for (int v = 0; v < nodeNum; ++v) {
-		if (dTable[0][v] > maxServerLength) {
-			maxServerLength = dTable[0][v];
-			serveredNode = v;
-		}
-	}
-	vector<int> vDistance(nodeNum);//备选用户节点与其他节点的最近距离
-	vDistance = CheckConstraints::Dijkstra(nodeNum, serveredNode, G);
+	int serverNode = selectSeveredNode(nodeNum, G);
 	vector<int> kClosedNode; //备选用户节点v的前k个最近节点
-	kClosedNode = ck::sortIndexes(vDistance, kClosed);
-	for (int i = kClosedNode.size() - 1; i >= 0 && kClosedNode[i] >= maxServerLength; i--) {
-		kClosedNode.pop_back();//只选择服务便长度小于最长服务边的用户节点
+	kClosedNode = sortIndexes(G[serverNode], kClosed);
+	for (int i = kClosedNode.size() - 1; i >= 0 && kClosedNode[i] >= dTable[0][serverNode]; i--) {
+		kClosedNode.pop_back();//只选择服务边长度小于最长服务边的用户节点
 	}
 	for (int f = 0; f < kClosedNode.size(); ++f) {
-		centers.push_back(kClosedNode[f]);
-		//sln.add_centers(serveredNode);
-		vDistance = CheckConstraints::Dijkstra(nodeNum, f, G);
-		for (int i = 0; i < nodeNum; ++i) {//更新f表和t表
-			if (vDistance[i] < dTable[0][i]) {
-				dTable[1][i] = dTable[0][i];
-				dTable[0][i] = vDistance[i];
-				fTable[1][i] = fTable[0][i];
-				fTable[0][i] = serveredNode;
-			}
-			else if (vDistance[i] < dTable[1][i]) {
-				dTable[1][i] = vDistance[i];
-				fTable[1][i] = serveredNode;
-			}
-			else;
-		}
-		//从已有节点中依次删去一个节点
-		for (int i = 0; i < centers.size() - 1; ++i) {
-			for (int j = 0; j < nodeNum; ++j) {//更新f表和t表
-				if (fTable[0][j] == i) {
-					fTable[0][j] = fTable[1][j];
-				}
-			}
+		addNodeToTable(centers, kClosedNode[f], nodeNum, G);
+		for (int i = 0; i < centers.size() - 1; ++i) {//从已有节点中依次删去一个节点
+			deleteNodeInTable(centers, centers[i], nodeNum, G);
+			//寻找最大的服务边长度
 		}
 	
 	}
@@ -413,6 +355,82 @@ bool Solver::optimize(Solution &sln, ID workerId) {
     Log(LogSwitch::Szx::Framework) << "worker " << workerId << " ends." << endl;
     return status;
 }
+
+void Solver::addNodeToTable(std::vector<int> &centers, int node, int nodeNum, vector<std::vector<int>> G)
+{
+
+	centers.push_back(node);
+	for (int i = 0; i < nodeNum; ++i) {//更新f表和t表
+		if (G[node][i] < dTable[0][i]) {
+			dTable[1][i] = dTable[0][i];
+			dTable[0][i] = G[node][i];
+			fTable[1][i] = fTable[0][i];
+			fTable[0][i] = node;
+		}
+		else if (G[node][i] < dTable[1][i]) {
+			dTable[1][i] = G[node][i];
+			fTable[1][i] = node;
+		}
+		else;
+	}
+}
+
+void Solver::deleteNodeInTable(std::vector<int> &centers, int node, int nodeNum, std::vector<std::vector<int>> G)
+{
+	int i = 0;
+	for (; i < centers.size() && centers[i] != node; ++i);//寻找要删除的节点
+	for (; i < centers.size()-1; ++i) {
+		centers[i] = centers[i + 1];
+	}
+	centers.pop_back();
+	for (int i = 0; i < nodeNum; ++i) {
+		if (fTable[0][i] == node) {
+			fTable[0][i] = fTable[1][i];
+			dTable[0][i] = dTable[1][i];
+			int secondClosed = -1, secondeLength = INF;
+			for (int j = 0; j < centers.size(); ++i) {
+				if (centers[j] != fTable[0][i] && secondeLength < G[i][centers[j]]) {
+					secondeLength = G[i][centers[j]];
+					secondClosed = centers[j];
+				}
+
+			}
+			dTable[1][i] = secondeLength;
+			fTable[1][i] = secondClosed;
+		}
+	}
+}
+
+int Solver::selectSeveredNode(int nodeNum, vector<std::vector<int>> G)
+{
+	int maxServerLength = -1, serveredNode = -1;
+	for (int v = 0; v < nodeNum; ++v) {
+		if (dTable[0][v] > maxServerLength) {
+			maxServerLength = dTable[0][v];
+			serveredNode = v;
+		}
+	}
+	vector<int> vDistance(nodeNum);//备选用户节点与其他节点的最近距离
+	vDistance = CheckConstraints::Dijkstra(nodeNum, serveredNode, G);
+	vector<int> kClosedNode; //备选用户节点v的前k个最近节点
+	kClosedNode = sortIndexes(vDistance, kClosed);
+	serveredNode = kClosedNode[rand.pick(kClosedNode.size())];//从这k个近节点中随机选择一个作为服务节点
+	return serveredNode;
+}
+
+vector<int> Solver::sortIndexes(const vector<int>& v, int k)
+{
+	//返回前k个最小值对应的索引值
+	vector<int> idx(v.size());
+	for (int i = 0; i != idx.size(); ++i) {
+		idx[i] = i;
+	}
+	sort(idx.begin(), idx.end(),
+		[&v](int i1, int i2) {return v[i1] < v[i2]; });
+	idx.assign(idx.begin(), idx.begin() + k);
+	return idx;
+}
+
 
 #pragma endregion Solver
 
