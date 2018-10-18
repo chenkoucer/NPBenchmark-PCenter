@@ -23,8 +23,8 @@ int main(int argc, char *argv[]) {
         CenterRepeatedError = 0x2,
     };
 
-    //string inputPath = "C:\\Users\\jinqi\\Desktop\\NPBenchmark-PCenter-master\\Deploy\\Instance\\pmed1.json";
-    //string outputPath = "C:\\Users\\jinqi\\Desktop\\NPBenchmark-PCenter-master\\Deploy\\Solution\\pmed1.json";
+    /*string inputPath = "C:\\Users\\jinqi\\Desktop\\NPBenchmark-PCenter-master\\Deploy\\Instance\\pmed1.json";
+    string outputPath = "C:\\Users\\jinqi\\Desktop\\NPBenchmark-PCenter-master\\Deploy\\Solution\\pmed1.json";*/
 
     string inputPath;
     string outputPath;
@@ -71,6 +71,6 @@ int main(int argc, char *argv[]) {
     maxLength = check.generateMaxLength();
 
     int returnCode = (error == 0) ? maxLength: ~error;
-    cout << returnCode << endl;
+    cout << "returnCode: " << returnCode << endl;
     return returnCode;
 }

@@ -9,6 +9,7 @@ using namespace std;
 
 const int INF = 1000000000;
 
+
 class CheckConstraints {
 public:
     int numOfNodes = 0;
@@ -38,8 +39,9 @@ public:
                     MIN = d[j];
                 }
             }
-            if (u == -1)
+            if (u == -1) {
                 return d;
+            }
             vis[u] = true; // 标记u已被访问
             for (int v = 0; v < n; ++v) {
                 if (vis[v] == false && d[u] + G[u][v] < d[v]) {
