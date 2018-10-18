@@ -286,7 +286,6 @@ bool Solver::optimize(Solution &sln, ID workerId) {
     }
 
 	//初始化服务节点
-#pragma initialize solution{
 	vector<int> centers;
 	int index = rand.pick(nodeNum);
 	//vector<vector<int>> fTable(2, vector<int>(nodeNum, -1));// 表示节点v的最近服务节点fTable[0][v]和次近服务节点fTable[1][v]
@@ -302,7 +301,6 @@ bool Solver::optimize(Solution &sln, ID workerId) {
 		addNodeToTable(centers, serverNode, nodeNum, G);
 	}
 	
-#pragma initialize solution}
 	for (int i = 0; i < centers.size(); ++i) {
 		sln.add_centers(centers[i]);
 	}
@@ -373,46 +371,59 @@ void Solver::addNodeToTable(std::vector<int> &centers, int node, int nodeNum, ve
 {
 
 	centers.push_back(node);
-	for (int i = 0; i < nodeNum; ++i) {//更新f表和t表
-		if (G[node][i] < dTable[0][i]) {
-			dTable[1][i] = dTable[0][i];
-			dTable[0][i] = G[node][i];
-			fTable[1][i] = fTable[0][i];
-			fTable[0][i] = node;
+	for (int v = 0; v < nodeNum; ++v) {//更新f表和t表
+		if (G[node][v] < dTable[0][v]) {
+			dTable[1][v] = dTable[0][v];
+			dTable[0][v] = G[node][v];
+			fTable[1][v] = fTable[0][v];
+			fTable[0][v] = node;
 		}
-		else if (G[node][i] < dTable[1][i]) {
-			dTable[1][i] = G[node][i];
-			fTable[1][i] = node;
+		else if (G[node][v] < dTable[1][v]) {
+			dTable[1][v] = G[node][v];
+			fTable[1][v] = node;
 		}
-		else;
+		if (dTable[0][v] > maxLength)
+			maxLength = dTable[0][v];
 	}
 }
 
 void Solver::deleteNodeInTable(std::vector<int> &centers, int node, int nodeNum, std::vector<std::vector<int>> &G)
 {
 	int i = 0;
-	for (; i < centers.size() && centers[i] != node; ++i);//寻找要删除的节点
+	for (; i < centers.size() && centers[i] != node; ++i);//寻找要删除的服务节点
 	for (; i < centers.size()-1; ++i) {
 		centers[i] = centers[i + 1];
 	}
 	centers.pop_back();
-	for (int i = 0; i < nodeNum; ++i) {
-		if (fTable[0][i] == node) {
-			fTable[0][i] = fTable[1][i];
-			dTable[0][i] = dTable[1][i];
-			int secondClosed = -1, secondeLength = INF;
-			for (int j = 0; j < centers.size(); ++i) {
-				if (centers[j] != fTable[0][i] && secondeLength < G[i][centers[j]]) {
-					secondeLength = G[i][centers[j]];
-					secondClosed = centers[j];
-				}
-
-			}
-			dTable[1][i] = secondeLength;
-			fTable[1][i] = secondClosed;
+	for (int v = 0; i < nodeNum; ++v) {
+		if (fTable[0][v] == node) {
+			fTable[0][v] = fTable[1][v];
+			dTable[0][v] = dTable[1][v];
+			findNext(centers, nodeNum, v, G);
+			
 		}
+		else if (fTable[1][v] == node) {
+			findNext(centers, nodeNum, v, G);
+		}
+		if (dTable[0][v] > maxLength)
+			maxLength = dTable[0][v];
 	}
 }
+
+void Solver::findNext(vector<int>& centers, int nodeNum, int v, vector<std::vector<int>>& G)
+{	
+	int nextNode = -1, secondLength = INF;
+	for (int i = 0; i < centers.size(); ++i) {
+		int f = centers[i];//寻找下一个次近服务节点
+		if (f != fTable[0][v] && G[v][f] < secondLength) {
+			secondLength = G[v][f]; 
+			nextNode = f;
+		}
+	}
+	dTable[1][v] = secondLength;
+	fTable[1][v] = nextNode;
+}
+
 
 int Solver::selectSeveredNode(int nodeNum, vector<std::vector<int>> &G)
 {
