@@ -202,9 +202,9 @@ protected:
 	std::vector<std::vector<int>> fTable, dTable;
 	int kClosed = 8;
 
-	void addNodeToTable(std::vector<int> &centers, int node, int nodeNum,  std::vector<std::vector<int>> G);//增加服务节点并更行f表和d表
-	void deleteNodeInTable(std::vector<int> &centers, int node, int nodeNum, std::vector<std::vector<int>> G);//删除服务节点并更新f表和d表
-	int selectSeveredNode(int nodeNum, std::vector<std::vector<int>> G);//选择服务节点
+	void addNodeToTable(std::vector<int> &centers, int node, int nodeNum,  std::vector<std::vector<int>> &G);//增加服务节点并更行f表和d表
+	void deleteNodeInTable(std::vector<int> &centers, int node, int nodeNum, std::vector<std::vector<int>> &G);//删除服务节点并更新f表和d表
+	int selectSeveredNode(int nodeNum, std::vector<std::vector<int>> &G);//选择服务节点
 	std::vector<int> sortIndexes(const std::vector<int> &v, int k);//返回前k个最小值对应的索引值
     #pragma endregion Method
 

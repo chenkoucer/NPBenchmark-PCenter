@@ -21,8 +21,8 @@ public:
     CheckConstraints(const pb::PCenter::Input &input_s, const pb::PCenter::Output &output_s);
 
 public:
-    static ::vector<int> Dijkstra(int n, int s, vector<vector<int>> G) {
-        ::vector<int> d(n, INF); // 初始化最短距离矩阵，全部为INF
+    static vector<int> Dijkstra(int n, int s, vector<vector<int>> &G) {
+        vector<int> d(n, INF); // 初始化最短距离矩阵，全部为INF
         vector<bool> vis(n); // 标记节点是否被访问
         vector<int> pre(n); // 最短路径的上一个节点
         for (int i = 0; i < n; ++i)

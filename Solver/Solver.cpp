@@ -272,6 +272,7 @@ bool Solver::optimize(Solution &sln, ID workerId) {
 	//ID kClosed = 8; // 最长边用户节点的前k个相邻节点，构造初始解时用到
     bool status = true;
     sln.maxLength = 0;
+	
     // TODO[0]: replace the following random assignment with your own algorithm.
     vector<vector<int>> G(nodeNum, vector<int>(nodeNum, INF));
     for (auto edge = input.graph().edges().begin(); edge != input.graph().edges().end(); ++edge) {
@@ -293,7 +294,7 @@ bool Solver::optimize(Solution &sln, ID workerId) {
 	//vector<vector<int>> dTable(2, vector<int>(nodeNum, INF)); //表示节点v的最近服务节距离dTable[0][v]和次近服务节点距离dTable[1][v]
 	fTable.assign(2, vector<int>(nodeNum, -1));
 	dTable.assign(2, vector<int>(nodeNum, INF));
-	sln.add_centers(index);
+	//sln.add_centers(index);
 	centers.push_back(index);
 	fTable[0].assign(nodeNum, index);
 	dTable[0] = CheckConstraints::Dijkstra(nodeNum, index, G);
@@ -301,9 +302,21 @@ bool Solver::optimize(Solution &sln, ID workerId) {
 		int serverNode = selectSeveredNode(nodeNum, G);
 		addNodeToTable(centers, serverNode, nodeNum, G);
 	}
+	
 #pragma initialize solution}
-
+	for (int i = 0; i < centers.size(); ++i) {
+		sln.add_centers(centers[i]);
+	}
+	int maxServerLength = -1, serveredNode = -1;
+	for (int v = 0; v < nodeNum; ++v) {
+		if (dTable[0][v] > maxServerLength) {
+			maxServerLength = dTable[0][v];
+			serveredNode = v;
+		}
+	}
+	sln.maxLength = maxServerLength;
 	//交换服务节点
+	/*
 #pragma exchange serveredNode{
 	int serverNode = selectSeveredNode(nodeNum, G);
 	vector<int> kClosedNode; //备选用户节点v的前k个最近节点
@@ -320,7 +333,7 @@ bool Solver::optimize(Solution &sln, ID workerId) {
 	
 	}
 #pragma exchange serveredNode}
-
+	*/
 
 	
 
@@ -356,7 +369,7 @@ bool Solver::optimize(Solution &sln, ID workerId) {
     return status;
 }
 
-void Solver::addNodeToTable(std::vector<int> &centers, int node, int nodeNum, vector<std::vector<int>> G)
+void Solver::addNodeToTable(std::vector<int> &centers, int node, int nodeNum, vector<std::vector<int>> &G)
 {
 
 	centers.push_back(node);
@@ -375,7 +388,7 @@ void Solver::addNodeToTable(std::vector<int> &centers, int node, int nodeNum, ve
 	}
 }
 
-void Solver::deleteNodeInTable(std::vector<int> &centers, int node, int nodeNum, std::vector<std::vector<int>> G)
+void Solver::deleteNodeInTable(std::vector<int> &centers, int node, int nodeNum, std::vector<std::vector<int>> &G)
 {
 	int i = 0;
 	for (; i < centers.size() && centers[i] != node; ++i);//寻找要删除的节点
@@ -401,7 +414,7 @@ void Solver::deleteNodeInTable(std::vector<int> &centers, int node, int nodeNum,
 	}
 }
 
-int Solver::selectSeveredNode(int nodeNum, vector<std::vector<int>> G)
+int Solver::selectSeveredNode(int nodeNum, vector<std::vector<int>> &G)
 {
 	int maxServerLength = -1, serveredNode = -1;
 	for (int v = 0; v < nodeNum; ++v) {
