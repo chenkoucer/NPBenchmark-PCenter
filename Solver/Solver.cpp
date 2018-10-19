@@ -8,7 +8,7 @@
 #include <mutex>
 #include <vector>
 #include <cmath>
-
+#include<map>
 #include "../Checker/CheckConstraints.h"
 
 
@@ -297,10 +297,11 @@ bool Solver::optimize(Solution &sln, ID workerId) {
 	fTable[0].assign(nodeNum, index);
 	dTable[0] = CheckConstraints::Dijkstra(nodeNum, index, G);
 	for (int f = 1; f < centerNum; ++f) {//从初始节点开始，依次构造服务节点
-		int serverNode = selectSeveredNode(nodeNum, G);
+		int serverNode = selectNextSeveredNode(nodeNum, G);
 		addNodeToTable(centers, serverNode, nodeNum, G);
 	}
-	
+	//测试初始解
+	/*
 	for (int i = 0; i < centers.size(); ++i) {
 		sln.add_centers(centers[i]);
 	}
@@ -312,26 +313,23 @@ bool Solver::optimize(Solution &sln, ID workerId) {
 		}
 	}
 	sln.maxLength = maxServerLength;
-	//交换服务节点
-	/*
-#pragma exchange serveredNode{
-	int serverNode = selectSeveredNode(nodeNum, G);
-	vector<int> kClosedNode; //备选用户节点v的前k个最近节点
-	kClosedNode = sortIndexes(G[serverNode], kClosed);
-	for (int i = kClosedNode.size() - 1; i >= 0 && kClosedNode[i] >= dTable[0][serverNode]; i--) {
-		kClosedNode.pop_back();//只选择服务边长度小于最长服务边的用户节点
-	}
-	for (int f = 0; f < kClosedNode.size(); ++f) {
-		addNodeToTable(centers, kClosedNode[f], nodeNum, G);
-		for (int i = 0; i < centers.size() - 1; ++i) {//从已有节点中依次删去一个节点
-			deleteNodeInTable(centers, centers[i], nodeNum, G);
-			//寻找最大的服务边长度
-		}
-	
-	}
-#pragma exchange serveredNode}
 	*/
+	//交换服务节点
+	int tenure = 10;
+	vector<vector<int>> tableTenur(nodeNum, vector<int>(nodeNum, 0));
+	for (int t = 0; t < 100; ++t) {
+		vector<int> switchNodes = findSeveredNodeNeighbourhood(nodeNum, G);//待增添节点
+		vector<vector<int>> switchNodePairs = findPair(switchNodes, centers, G);//交换节点对，若存在相同的Mf则全部返回
+		vector<int> switchNodePair = switchNodePairs[rand.pick(switchNodePairs.size())];//交换节点对
+		int f = switchNodePair[0], v = switchNodePair[1];
+		if (tableTenur[f][v] > t)
+			continue;
+		addNodeToTable(centers, f, nodeNum, G);
+		deleteNodeInTable(centers, v, nodeNum, G);
+		tableTenur[f][v] = t + tenure;//禁忌该点
 
+	}
+		
 	
 
 	/*
@@ -425,7 +423,14 @@ void Solver::findNext(vector<int>& centers, int nodeNum, int v, vector<std::vect
 }
 
 
-int Solver::selectSeveredNode(int nodeNum, vector<std::vector<int>> &G)
+int Solver::selectNextSeveredNode(int nodeNum, vector<std::vector<int>> &G)
+{
+	vector<int> kClosedNode = findSeveredNodeNeighbourhood(nodeNum, G);
+	int serveredNode = kClosedNode[rand.pick(kClosedNode.size())];//从这k个近节点中随机选择一个作为服务节点
+	return serveredNode;
+}
+
+vector<int> Solver::findSeveredNodeNeighbourhood(int nodeNum, vector<vector<int>>& G)
 {
 	int maxServerLength = -1, serveredNode = -1;
 	for (int v = 0; v < nodeNum; ++v) {
@@ -434,25 +439,59 @@ int Solver::selectSeveredNode(int nodeNum, vector<std::vector<int>> &G)
 			serveredNode = v;
 		}
 	}
-	vector<int> vDistance(nodeNum);//备选用户节点与其他节点的最近距离
-	vDistance = CheckConstraints::Dijkstra(nodeNum, serveredNode, G);
 	vector<int> kClosedNode; //备选用户节点v的前k个最近节点
-	kClosedNode = sortIndexes(vDistance, kClosed);
-	serveredNode = kClosedNode[rand.pick(kClosedNode.size())];//从这k个近节点中随机选择一个作为服务节点
-	return serveredNode;
+	kClosedNode = sortIndexes(G[serveredNode], kClosed, maxServerLength);
+	return kClosedNode;
 }
 
-vector<int> Solver::sortIndexes(const vector<int>& v, int k)
+vector<int> Solver::sortIndexes(const vector<int>& v, int k,int length)
 {
 	//返回前k个最小值对应的索引值
-	vector<int> idx(v.size());
+	vector<int> idx(v.size()), res(k);
 	for (int i = 0; i != idx.size(); ++i) {
 		idx[i] = i;
 	}
 	sort(idx.begin(), idx.end(),
 		[&v](int i1, int i2) {return v[i1] < v[i2]; });
-	idx.assign(idx.begin(), idx.begin() + k);
-	return idx;
+	for (int i = 0; i < k; i++) {
+		if (v[idx[i]] < length)
+			res.push_back(idx[i]);
+	}
+	return res;
+}
+
+vector<vector<int>> Solver::findPair(const vector<int>& switchNode, vector<int> centers, vector<vector<int>>& G)
+{
+	int minMaxLength = INF;//原始目标函数值
+	vector<vector<int>> res;
+	for (int i = 0; i < switchNode.size(); ++i) {
+		map<int, int> Mf;//存放删除某个服务节点f后产生的最长服务边maxlength，key为f value为maxlength
+		for (int j = 0; i < centers.size(); ++i) {
+			Mf[centers[j]] = 0;
+		}
+		for (int v = 0; v < dTable[0].size(); ++v) {
+			if (min(G[i][v], dTable[1][v]) > Mf[fTable[0][v]])
+				Mf[fTable[0][v]] = min(G[i][v], dTable[1][v]);
+		}
+		for (int f = 0; f < centers.size(); f++) {
+			//选出删除f后所产生的最小最长服务边
+			if (Mf[centers[f]] == minMaxLength) {
+				vector<int> r;
+				r.push_back(centers[f]);
+				r.push_back(i);
+				res.push_back(r);
+			}
+			else if (Mf[centers[f]] < minMaxLength) {
+				res.clear();
+				vector<int> r;
+				r.push_back(centers[f]);
+				r.push_back(i);
+				res.push_back(r);
+				minMaxLength = Mf[centers[f]];
+			}
+		}
+	}
+	return  res;
 }
 
 
