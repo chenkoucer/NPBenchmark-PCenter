@@ -258,22 +258,30 @@ void Solver::init() {
 
 bool Solver::optimize(Solution &sln, ID workerId) {
     Log(LogSwitch::Szx::Framework) << "worker " << workerId << " starts." << endl;
-    //vector<int> vec;
 	vector<int> vec;
     for (auto edge = input.graph().edges().begin(); edge != input.graph().edges().end(); ++edge) {
         vec.push_back(edge->source());
         vec.push_back(edge->target());
     }
     auto maxPosition = max_element(vec.begin(), vec.end());
-    ID nodeNum = *maxPosition;
-    ID edgeNum = input.graph().edges().size();
-    ID centerNum = input.centernum();
-	//ID kClosed = 8; // 最长边用户节点的前k个相邻节点，构造初始解时用到
+    nodeNum = *maxPosition;
+    edgeNum = input.graph().edges().size();
+    centerNum = input.centernum();
     bool status = true;
     sln.maxLength = 0;
 	
     // TODO[0]: replace the following random assignment with your own algorithm.
-    vector<vector<int>> G(nodeNum, vector<int>(nodeNum, INF));
+	G.resize(nodeNum);
+	for (int i = 0; i < nodeNum; i++) {
+		G[i].resize(nodeNum);
+	}
+	for (int i = 0; i < nodeNum; ++i) {
+		for (int j = 0; j < nodeNum; ++j) {
+			G[i][j] = INT32_MAX;
+		}
+	}	
+	for (int i = 0; i < nodeNum; ++i)
+		G[i][i] = 0;
     for (auto edge = input.graph().edges().begin(); edge != input.graph().edges().end(); ++edge) {
         int source = edge->source();
         int target = edge->target();
@@ -281,29 +289,31 @@ bool Solver::optimize(Solution &sln, ID workerId) {
         G[source - 1][target - 1] = length;
         G[target - 1][source - 1] = length;
     }
-    for (int i = 0; i < nodeNum; ++i) {
-        G[i] = CheckConstraints::Dijkstra(nodeNum, i, G);
-    }
-
+	for (int k = 0; k < nodeNum; ++k)
+		for (int i = 0; i < nodeNum; ++i)
+			for (int j = 0; j < nodeNum; ++j)
+				if (G[i][k] != INT32_MAX && G[k][j] != INT32_MAX &&
+					G[i][j] > G[i][k] + G[k][j])
+					G[i][j] = G[i][k] + G[k][j];
 	//初始化服务节点
-	vector<int> centers;
+	isServerdNode.assign(nodeNum, false);
 	int index = rand.pick(nodeNum);
-	//vector<vector<int>> fTable(2, vector<int>(nodeNum, -1));// 表示节点v的最近服务节点fTable[0][v]和次近服务节点fTable[1][v]
-	//vector<vector<int>> dTable(2, vector<int>(nodeNum, INF)); //表示节点v的最近服务节距离dTable[0][v]和次近服务节点距离dTable[1][v]
-	fTable.assign(2, vector<int>(nodeNum, -1));
 	dTable.assign(2, vector<int>(nodeNum, INF));
-	//sln.add_centers(index);
+	fTable.assign(2, vector<int>(nodeNum, -1));
+	centers.clear();
 	centers.push_back(index);
+	isServerdNode[index] = true;
 	fTable[0].assign(nodeNum, index);
-	dTable[0] = CheckConstraints::Dijkstra(nodeNum, index, G);
+	dTable[0] = G[index];
 	for (int f = 1; f < centerNum; ++f) {//从初始节点开始，依次构造服务节点
-		int serverNode = selectNextSeveredNode(nodeNum, G);
-		addNodeToTable(centers, serverNode, nodeNum, G);
+		int serverNode = selectNextSeveredNode();
+		addNodeToTable(serverNode);
+		cout << "inital maxLength : " << f <<"  "<< maxLength << endl;
 	}
 	//测试初始解
 	/*
 	for (int i = 0; i < centers.size(); ++i) {
-		sln.add_centers(centers[i]);
+		sln.add_centers(centers[i] + 1);
 	}
 	int maxServerLength = -1, serveredNode = -1;
 	for (int v = 0; v < nodeNum; ++v) {
@@ -315,60 +325,39 @@ bool Solver::optimize(Solution &sln, ID workerId) {
 	sln.maxLength = maxServerLength;
 	*/
 	//交换服务节点
-	int tenure = 10;
-	vector<vector<int>> tableTenur(nodeNum, vector<int>(nodeNum, 0));
-	for (int t = 0; t < 100; ++t) {
-		vector<int> switchNodes = findSeveredNodeNeighbourhood(nodeNum, G);//待增添节点
-		vector<vector<int>> switchNodePairs = findPair(switchNodes, centers, G);//交换节点对，若存在相同的Mf则全部返回
-		vector<int> switchNodePair = switchNodePairs[rand.pick(switchNodePairs.size())];//交换节点对
+	cout << "inital maxLength : " << maxLength << endl;
+	hist_maxLength = maxLength;
+	server_tenure = centerNum / 2;
+	user_tenure = centerNum;
+	serverTableTenure.assign(nodeNum, 0);
+	userTableTenure.assign(nodeNum, 0);
+	vector<int> switchNodes;
+	vector<vector<int>> switchNodePairs;
+	vector<int> switchNodePair;
+	for (int t = 0; t < 1000; ++t) {
+		switchNodes = findSeveredNodeNeighbourhood();//待增添节点
+		switchNodePairs = findPair(switchNodes);//交换节点对，若存在相同的Mf则全部返回
+		switchNodePair = switchNodePairs[rand.pick(switchNodePairs.size())];//交换节点对
 		int f = switchNodePair[0], v = switchNodePair[1];
-		if (tableTenur[f][v] > t)
-			continue;
-		addNodeToTable(centers, f, nodeNum, G);
-		deleteNodeInTable(centers, v, nodeNum, G);
-		tableTenur[f][v] = t + tenure;//禁忌该点
-
+		addNodeToTable(f);
+		deleteNodeInTable(v);
+		serverTableTenure[f] = t + server_tenure;//禁忌服务点在接下来的一段时间内被交换用户节点
+		userTableTenure[v] = t + user_tenure; //禁忌用户节点在接下来的一段时间内被交换成服务点
 	}
-		
-	
-
-	/*
-    vector<int> centers;
-    for (int e = 0; !timer.isTimeOut() && (e < centerNum); ++e) {
-        int index = rand.pick(0, nodeNum);
-        sln.add_centers(index);
-        centers.push_back(index);
-    }
-    //cout << sln.centers().size() << endl;
-    vector<vector<int>> distance(centerNum, vector<int>(nodeNum)); // 所有服务节点到其余节点的距离
-    for (int i = 0; i < centerNum; ++i) {
-        distance[i] = CheckConstraints::Dijkstra(nodeNum, sln.centers(i), G);
-    }
-    vector<int> serveLength;
-    for (int i = 0; i < nodeNum; ++i) {
-        if (find(centers.begin(), centers.end(), i + 1) == centers.end()) { // 只处理用户节点
-            vector<int> length(centerNum);
-            for (int j = 0; j < centerNum; ++j) {
-                length[j] = distance[j][i];
-            }
-            auto minPosition = min_element(length.begin(), length.end());
-            serveLength.push_back(*minPosition); // 服务边的长度
-        }
-    }
-    auto maxPosition_s = max_element(serveLength.begin(), serveLength.end()); // 服务边中的最大值
-    sln.maxLength = *maxPosition_s;
-
-	*/
-
-
+	for (int i = 0; i < centers.size(); ++i) {
+		sln.add_centers(centers[i] + 1);
+	}
+	sln.maxLength = maxLength;
+	cout << "maxLength  " << maxLength << endl;
     Log(LogSwitch::Szx::Framework) << "worker " << workerId << " ends." << endl;
     return status;
 }
 
-void Solver::addNodeToTable(std::vector<int> &centers, int node, int nodeNum, vector<std::vector<int>> &G)
+void Solver::addNodeToTable(int node)
 {
-
+	maxLength = 0;
 	centers.push_back(node);
+	isServerdNode[node] = true;
 	for (int v = 0; v < nodeNum; ++v) {//更新f表和t表
 		if (G[node][v] < dTable[0][v]) {
 			dTable[1][v] = dTable[0][v];
@@ -385,7 +374,7 @@ void Solver::addNodeToTable(std::vector<int> &centers, int node, int nodeNum, ve
 	}
 }
 
-void Solver::deleteNodeInTable(std::vector<int> &centers, int node, int nodeNum, std::vector<std::vector<int>> &G)
+void Solver::deleteNodeInTable(int node)
 {
 	int i = 0;
 	for (; i < centers.size() && centers[i] != node; ++i);//寻找要删除的服务节点
@@ -393,22 +382,22 @@ void Solver::deleteNodeInTable(std::vector<int> &centers, int node, int nodeNum,
 		centers[i] = centers[i + 1];
 	}
 	centers.pop_back();
-	for (int v = 0; i < nodeNum; ++v) {
+	for (int v = 0; v < nodeNum; ++v) {
 		if (fTable[0][v] == node) {
 			fTable[0][v] = fTable[1][v];
 			dTable[0][v] = dTable[1][v];
-			findNext(centers, nodeNum, v, G);
+			findNext(v);
 			
 		}
 		else if (fTable[1][v] == node) {
-			findNext(centers, nodeNum, v, G);
+			findNext(v);
 		}
 		if (dTable[0][v] > maxLength)
 			maxLength = dTable[0][v];
 	}
 }
 
-void Solver::findNext(vector<int>& centers, int nodeNum, int v, vector<std::vector<int>>& G)
+void Solver::findNext(int v)
 {	
 	int nextNode = -1, secondLength = INF;
 	for (int i = 0; i < centers.size(); ++i) {
@@ -422,15 +411,14 @@ void Solver::findNext(vector<int>& centers, int nodeNum, int v, vector<std::vect
 	fTable[1][v] = nextNode;
 }
 
-
-int Solver::selectNextSeveredNode(int nodeNum, vector<std::vector<int>> &G)
+int Solver::selectNextSeveredNode()
 {
-	vector<int> kClosedNode = findSeveredNodeNeighbourhood(nodeNum, G);
+	vector<int> kClosedNode = findSeveredNodeNeighbourhood();
 	int serveredNode = kClosedNode[rand.pick(kClosedNode.size())];//从这k个近节点中随机选择一个作为服务节点
 	return serveredNode;
 }
 
-vector<int> Solver::findSeveredNodeNeighbourhood(int nodeNum, vector<vector<int>>& G)
+vector<int> Solver::findSeveredNodeNeighbourhood()
 {
 	int maxServerLength = -1, serveredNode = -1;
 	for (int v = 0; v < nodeNum; ++v) {
@@ -447,24 +435,30 @@ vector<int> Solver::findSeveredNodeNeighbourhood(int nodeNum, vector<vector<int>
 vector<int> Solver::sortIndexes(const vector<int>& v, int k,int length)
 {
 	//返回前k个最小值对应的索引值
-	vector<int> idx(v.size()), res(k);
+	vector<int> idx(v.size());
+	vector<int> res;
 	for (int i = 0; i != idx.size(); ++i) {
 		idx[i] = i;
 	}
 	sort(idx.begin(), idx.end(),
 		[&v](int i1, int i2) {return v[i1] < v[i2]; });
 	for (int i = 0; i < k; i++) {
+		if (isServerdNode[idx[i]]) {
+			++k;
+			continue;
+		}
 		if (v[idx[i]] < length)
 			res.push_back(idx[i]);
 	}
 	return res;
 }
 
-vector<vector<int>> Solver::findPair(const vector<int>& switchNode, vector<int> centers, vector<vector<int>>& G)
+vector<vector<int>> Solver::findPair(const vector<int>& switchNode)
 {
 	int minMaxLength = INF;//原始目标函数值
 	vector<vector<int>> res;
-	for (int i = 0; i < switchNode.size(); ++i) {
+	for (int i : switchNode) {
+		//isServerdNode[i] = true;
 		map<int, int> Mf;//存放删除某个服务节点f后产生的最长服务边maxlength，key为f value为maxlength
 		for (int j = 0; i < centers.size(); ++i) {
 			Mf[centers[j]] = 0;

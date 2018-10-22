@@ -10,8 +10,6 @@ CheckConstraints::CheckConstraints(const pb::PCenter::Input &input_s, const pb::
     output = output_s;
 }
 
-
-
 int CheckConstraints::generateNum() { // 获取节点数
     vector<int> vec;
     for (auto edge = input.graph().edges().begin(); edge != input.graph().edges().end(); ++edge) {

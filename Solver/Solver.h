@@ -195,19 +195,31 @@ public:
     bool check(Length &obj) const;
     void record() const; // save running log.
 
+private:
+	std::vector<std::vector<int>> G;
+	int kClosed = 8;
+	int maxLength = 0;
+	int hist_maxLength = 0;
+	int nodeNum;
+	int edgeNum;
+	int centerNum;
+	int server_tenure;
+	int user_tenure;
+	std::vector<int> serverTableTenure;
+	std::vector<int> userTableTenure;
+	std::vector<bool> isServerdNode;
+	std::vector<int> centers;
 protected:
     void init();
     bool optimize(Solution &sln, ID workerId = 0); // optimize by a single worker.
 	std::vector<std::vector<int>> fTable, dTable;
-	int kClosed = 8;
-	int maxLength = -1;
-	void addNodeToTable(std::vector<int> &centers, int node, int nodeNum,  std::vector<std::vector<int>> &G);//增加服务节点并更行f表和d表
-	void deleteNodeInTable(std::vector<int> &centers, int node, int nodeNum, std::vector<std::vector<int>> &G);//删除服务节点并更新f表和d表
-	void findNext(std::vector<int> &centers, int nodeNum, int v, std::vector<std::vector<int>> &G);//寻找次近服务节点并更新f表和d表
-	int selectNextSeveredNode(int nodeNum, std::vector<std::vector<int>> &G);//选择服务节点
-	std::vector<int> findSeveredNodeNeighbourhood(int nodeNum, std::vector<std::vector<int>> &G);//选择服务节点
+	void addNodeToTable(int node);//增加服务节点并更行f表和d表
+	void deleteNodeInTable( int node);//删除服务节点并更新f表和d表
+	void findNext(int v);//寻找次近服务节点并更新f表和d表
+	int selectNextSeveredNode();//选择服务节点
+	std::vector<int> findSeveredNodeNeighbourhood();//选择服务节点
 	std::vector<int> sortIndexes(const std::vector<int> &v, int k, int length);//返回前k个最小值对应的索引值
-	std::vector<std::vector<int>> findPair(const std::vector<int> &alternativeNode, std::vector<int> centers,std::vector<std::vector<int>> &G);//返回(f,v)f为增加的节点，v为删除的节点
+	std::vector<std::vector<int>> findPair(const std::vector<int> &alternativeNode);//返回(f,v)f为增加的节点，v为删除的节点
     #pragma endregion Method
 
 

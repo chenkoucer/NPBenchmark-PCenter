@@ -7,7 +7,7 @@
 
 using namespace std;
 
-const int INF = 1000000000;
+const int INF = INT32_MAX;
 
 
 class CheckConstraints {

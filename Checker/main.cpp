@@ -69,8 +69,7 @@ int main(int argc, char *argv[]) {
     CheckConstraints check(input, output);
     check.generateNum();
     maxLength = check.generateMaxLength();
-
     int returnCode = (error == 0) ? maxLength: ~error;
-    cout << "returnCode: " << returnCode << endl;
+    cout << "returnCoded: " << returnCode << endl;
     return returnCode;
 }
