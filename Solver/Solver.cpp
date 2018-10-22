@@ -308,7 +308,7 @@ bool Solver::optimize(Solution &sln, ID workerId) {
 	for (int f = 1; f < centerNum; ++f) {//从初始节点开始，依次构造服务节点
 		int serverNode = selectNextSeveredNode();
 		addNodeToTable(serverNode);
-		cout << "inital maxLength : " << f <<"  "<< maxLength << endl;
+		//cout << "inital maxLength : " << f <<"  "<< maxLength << endl;
 	}
 	//测试初始解
 	/*
@@ -334,13 +334,22 @@ bool Solver::optimize(Solution &sln, ID workerId) {
 	vector<int> switchNodes;
 	vector<vector<int>> switchNodePairs;
 	vector<int> switchNodePair;
-	for (int t = 0; t < 1000; ++t) {
+	for (int t = 0; t < 5000; ++t) {
+        switchNodePair.clear();
+        switchNodes.clear();
+        switchNodePairs.clear();
 		switchNodes = findSeveredNodeNeighbourhood();//待增添节点
+        //for (int i = 0; i < switchNodes.size(); ++i) {
+        //     cout << "witchnode:  "<<switchNodes[i] << "   length:  "<<dTable[0][switchNodes[i]] << endl;
+        //}
 		switchNodePairs = findPair(switchNodes);//交换节点对，若存在相同的Mf则全部返回
 		switchNodePair = switchNodePairs[rand.pick(switchNodePairs.size())];//交换节点对
 		int f = switchNodePair[0], v = switchNodePair[1];
+        //cout << "f :" << f << "   v :" << v << endl;
 		addNodeToTable(f);
+        //cout << "add f length: " << maxLength << endl;
 		deleteNodeInTable(v);
+        //cout << "delete v length: " << maxLength << endl;
 		serverTableTenure[f] = t + server_tenure;//禁忌服务点在接下来的一段时间内被交换用户节点
 		userTableTenure[v] = t + user_tenure; //禁忌用户节点在接下来的一段时间内被交换成服务点
 	}
@@ -348,13 +357,14 @@ bool Solver::optimize(Solution &sln, ID workerId) {
 		sln.add_centers(centers[i] + 1);
 	}
 	sln.maxLength = maxLength;
-	cout << "maxLength  " << maxLength << endl;
+	cout << "maxLength after change: " << maxLength << endl;
     Log(LogSwitch::Szx::Framework) << "worker " << workerId << " ends." << endl;
     return status;
 }
 
 void Solver::addNodeToTable(int node)
 {
+    isServerdNode[node] = true;
 	maxLength = 0;
 	centers.push_back(node);
 	isServerdNode[node] = true;
@@ -376,6 +386,8 @@ void Solver::addNodeToTable(int node)
 
 void Solver::deleteNodeInTable(int node)
 {
+    isServerdNode[node] = false;
+    maxLength = 0;
 	int i = 0;
 	for (; i < centers.size() && centers[i] != node; ++i);//寻找要删除的服务节点
 	for (; i < centers.size()-1; ++i) {
@@ -457,10 +469,11 @@ vector<vector<int>> Solver::findPair(const vector<int>& switchNode)
 {
 	int minMaxLength = INF;//原始目标函数值
 	vector<vector<int>> res;
+    map<int, int> Mf;
 	for (int i : switchNode) {
 		//isServerdNode[i] = true;
-		map<int, int> Mf;//存放删除某个服务节点f后产生的最长服务边maxlength，key为f value为maxlength
-		for (int j = 0; i < centers.size(); ++i) {
+		Mf.clear();//存放删除某个服务节点f后产生的最长服务边maxlength，key为f value为maxlength
+		for (int j = 0; j < centers.size(); ++j) {
 			Mf[centers[j]] = 0;
 		}
 		for (int v = 0; v < dTable[0].size(); ++v) {
@@ -471,15 +484,15 @@ vector<vector<int>> Solver::findPair(const vector<int>& switchNode)
 			//选出删除f后所产生的最小最长服务边
 			if (Mf[centers[f]] == minMaxLength) {
 				vector<int> r;
-				r.push_back(centers[f]);
 				r.push_back(i);
+                r.push_back(centers[f]);
 				res.push_back(r);
 			}
 			else if (Mf[centers[f]] < minMaxLength) {
 				res.clear();
 				vector<int> r;
-				r.push_back(centers[f]);
-				r.push_back(i);
+                r.push_back(i);
+                r.push_back(centers[f]);
 				res.push_back(r);
 				minMaxLength = Mf[centers[f]];
 			}
