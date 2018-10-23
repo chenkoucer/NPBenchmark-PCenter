@@ -308,7 +308,7 @@ bool Solver::optimize(Solution &sln, ID workerId) {
 	for (int f = 1; f < centerNum; ++f) {//从初始节点开始，依次构造服务节点
 		int serverNode = selectNextSeveredNode();
 		addNodeToTable(serverNode);
-		//cout << "inital maxLength : " << f <<"  "<< maxLength << endl;
+		cout << "inital maxLength : " << f <<"  "<< maxLength << endl;
 	}
 	//测试初始解
 	/*
@@ -327,14 +327,14 @@ bool Solver::optimize(Solution &sln, ID workerId) {
 	//交换服务节点
 	cout << "inital maxLength : " << maxLength << endl;
 	hist_maxLength = maxLength;
-	server_tenure = centerNum / 2;
-	user_tenure = centerNum;
+	server_tenure = centerNum / 3;
+	user_tenure = centerNum * 2;
 	serverTableTenure.assign(nodeNum, 0);
 	userTableTenure.assign(nodeNum, 0);
 	vector<int> switchNodes;
 	vector<vector<int>> switchNodePairs;
 	vector<int> switchNodePair;
-	for (int t = 0; t < 5000; ++t) {
+	for (int t = 0; t < 50000; ++t) {
         switchNodePair.clear();
         switchNodes.clear();
         switchNodePairs.clear();
@@ -344,7 +344,9 @@ bool Solver::optimize(Solution &sln, ID workerId) {
         //}
 		switchNodePairs = findPair(switchNodes);//交换节点对，若存在相同的Mf则全部返回
 		switchNodePair = switchNodePairs[rand.pick(switchNodePairs.size())];//交换节点对
-		int f = switchNodePair[0], v = switchNodePair[1];
+		int f = switchNodePair[0], v = switchNodePair[1], minMaxlength = switchNodePair[2];
+		if ((t < serverTableTenure[v] && t < userTableTenure[f]) && minMaxlength >= maxLength)continue;
+
         //cout << "f :" << f << "   v :" << v << endl;
 		addNodeToTable(f);
         //cout << "add f length: " << maxLength << endl;
@@ -486,15 +488,18 @@ vector<vector<int>> Solver::findPair(const vector<int>& switchNode)
 				vector<int> r;
 				r.push_back(i);
                 r.push_back(centers[f]);
+				r.push_back(minMaxLength);
 				res.push_back(r);
 			}
 			else if (Mf[centers[f]] < minMaxLength) {
+				minMaxLength = Mf[centers[f]];
 				res.clear();
 				vector<int> r;
                 r.push_back(i);
                 r.push_back(centers[f]);
+				r.push_back(minMaxLength);
 				res.push_back(r);
-				minMaxLength = Mf[centers[f]];
+				
 			}
 		}
 	}
