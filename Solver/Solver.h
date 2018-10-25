@@ -197,16 +197,14 @@ public:
 
 private:
 	std::vector<std::vector<int>> G;
-	int kClosed = 8;
+	int kClosed = 50;
 	int maxLength = 0;
 	int hist_maxLength = 0;
 	int nodeNum;
 	int edgeNum;
 	int centerNum;
-	int server_tenure;
-	int user_tenure;
-	std::vector<int> serverTableTenure;
-	std::vector<int> userTableTenure;
+	int step_tenure = 15;
+	std::vector<std::vector<int>> tableTenure;
 	std::vector<bool> isServerdNode;
 	std::vector<int> centers;
 protected:
@@ -219,7 +217,7 @@ protected:
 	int selectNextSeveredNode();//选择服务节点
 	std::vector<int> findSeveredNodeNeighbourhood();//选择服务节点
 	std::vector<int> sortIndexes(const std::vector<int> &v, int k, int length);//返回前k个最小值对应的索引值
-	std::vector<std::vector<int>> findPair(const std::vector<int> &alternativeNode);//返回(f,v)f为增加的节点，v为删除的节点
+	std::vector<std::vector<int>> findPair(const std::vector<int> &alternativeNode, int t);//返回(f,v)f为增加的节点，v为删除的节点
     #pragma endregion Method
 
 

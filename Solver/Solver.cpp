@@ -327,14 +327,11 @@ bool Solver::optimize(Solution &sln, ID workerId) {
 	//交换服务节点
 	cout << "inital maxLength : " << maxLength << endl;
 	hist_maxLength = maxLength;
-	server_tenure = centerNum / 3;
-	user_tenure = centerNum * 2;
-	serverTableTenure.assign(nodeNum, 0);
-	userTableTenure.assign(nodeNum, 0);
+	tableTenure.assign(nodeNum, vector<int>(nodeNum, 0));
 	vector<int> switchNodes;
 	vector<vector<int>> switchNodePairs;
 	vector<int> switchNodePair;
-	for (int t = 0; t < 50000; ++t) {
+	for (int t = 0; t < 10000; ++t) {
         switchNodePair.clear();
         switchNodes.clear();
         switchNodePairs.clear();
@@ -342,18 +339,18 @@ bool Solver::optimize(Solution &sln, ID workerId) {
         //for (int i = 0; i < switchNodes.size(); ++i) {
         //     cout << "witchnode:  "<<switchNodes[i] << "   length:  "<<dTable[0][switchNodes[i]] << endl;
         //}
-		switchNodePairs = findPair(switchNodes);//交换节点对，若存在相同的Mf则全部返回
+		switchNodePairs = findPair(switchNodes, t);//交换节点对，若存在相同的Mf则全部返回
+		if (switchNodePairs.size() == 0)
+			continue;
 		switchNodePair = switchNodePairs[rand.pick(switchNodePairs.size())];//交换节点对
 		int f = switchNodePair[0], v = switchNodePair[1], minMaxlength = switchNodePair[2];
-		if ((t < serverTableTenure[v] && t < userTableTenure[f]) && minMaxlength >= maxLength)continue;
-
         //cout << "f :" << f << "   v :" << v << endl;
 		addNodeToTable(f);
         //cout << "add f length: " << maxLength << endl;
 		deleteNodeInTable(v);
         //cout << "delete v length: " << maxLength << endl;
-		serverTableTenure[f] = t + server_tenure;//禁忌服务点在接下来的一段时间内被交换用户节点
-		userTableTenure[v] = t + user_tenure; //禁忌用户节点在接下来的一段时间内被交换成服务点
+		tableTenure[f][v] = t + step_tenure;//禁忌服务点在接下来的一段时间内被交换用户节点
+
 	}
 	for (int i = 0; i < centers.size(); ++i) {
 		sln.add_centers(centers[i] + 1);
@@ -434,13 +431,19 @@ int Solver::selectNextSeveredNode()
 
 vector<int> Solver::findSeveredNodeNeighbourhood()
 {
-	int maxServerLength = -1, serveredNode = -1;
+	int maxServerLength = -1;
+	vector<int> serveredNodes;
 	for (int v = 0; v < nodeNum; ++v) {
 		if (dTable[0][v] > maxServerLength) {
+			serveredNodes.clear();
 			maxServerLength = dTable[0][v];
-			serveredNode = v;
+			serveredNodes.push_back(v);
+		}
+		else if (dTable[0][v] == maxServerLength) {
+			serveredNodes.push_back(v);
 		}
 	}
+	int serveredNode = serveredNodes[rand.pick(serveredNodes.size())];
 	vector<int> kClosedNode; //备选用户节点v的前k个最近节点
 	kClosedNode = sortIndexes(G[serveredNode], kClosed, maxServerLength);
 	return kClosedNode;
@@ -467,11 +470,11 @@ vector<int> Solver::sortIndexes(const vector<int>& v, int k,int length)
 	return res;
 }
 
-vector<vector<int>> Solver::findPair(const vector<int>& switchNode)
+vector<vector<int>> Solver::findPair(const vector<int>& switchNode, int t)
 {
 	int minMaxLength = INF;//原始目标函数值
 	vector<vector<int>> res;
-    map<int, int> Mf;
+    map<int, int> Mf; //t < serverTableTenure[v] && t < userTableTenure[f]
 	for (int i : switchNode) {
 		//isServerdNode[i] = true;
 		Mf.clear();//存放删除某个服务节点f后产生的最长服务边maxlength，key为f value为maxlength
@@ -484,17 +487,21 @@ vector<vector<int>> Solver::findPair(const vector<int>& switchNode)
 		}
 		for (int f = 0; f < centers.size(); f++) {
 			//选出删除f后所产生的最小最长服务边
+			if (t < tableTenure[i][centers[f]] && Mf[centers[f]] >=  maxLength)
+				continue;
 			if (Mf[centers[f]] == minMaxLength) {
 				vector<int> r;
+				r.clear();
 				r.push_back(i);
                 r.push_back(centers[f]);
 				r.push_back(minMaxLength);
 				res.push_back(r);
 			}
-			else if (Mf[centers[f]] < minMaxLength) {
+			else if ( Mf[centers[f]] < minMaxLength) {
 				minMaxLength = Mf[centers[f]];
 				res.clear();
 				vector<int> r;
+				r.clear();
                 r.push_back(i);
                 r.push_back(centers[f]);
 				r.push_back(minMaxLength);
